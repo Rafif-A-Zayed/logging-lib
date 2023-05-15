@@ -1,0 +1,52 @@
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    <springProperty scope="context" name="TOPIC" source="logging.topic"/>
+    <springProperty scope="context" name="KAFKA_URL" source="spring.kafka.properties.bootstrap.servers"/>
+    <springProperty scope="context" name="SERVICE_NAME" source="application.service-name"/>
+    <springProperty scope="context" name="SERVICE_NUMBER" source="application.service-number"/>
+    <springProperty scope="context" name="ENABLE_KAFKA" source="logging.kafka.enable"/>
+
+    <if condition='${ENABLE_KAFKA}'>
+        <then>
+            <appender name="fail-fast-kafka-appender" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+                <filter class="com.addon.logging.logback.LoggingAuditFilter"/>
+                <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                    <provider class="com.addon.logging.logback.EventDataProvider">
+                        <serviceNumber>${SERVICE_NUMBER}</serviceNumber>
+                        <serviceName>${SERVICE_NAME}</serviceName>
+                    </provider>
+                    <includeContext>false</includeContext>
+                    <includeCallerData>false</includeCallerData>
+                    <includeMdc>false</includeMdc>
+                    <includeTags>false</includeTags>
+                    <timestampPattern>[UNIX_TIMESTAMP_AS_NUMBER]</timestampPattern>
+                    <fieldNames>
+                        <timestamp>timestamp</timestamp>
+                        <version>[ignore]</version>
+                        <levelValue>[ignore]</levelValue>
+                        <level>[ignore]</level>
+                        <levelValue>[ignore]</levelValue>
+                        <message>[ignore]</message>
+                    </fieldNames>
+                </encoder>
+
+                <topic>${TOPIC}</topic>
+                <keyingStrategy class="com.github.danielwegener.logback.kafka.keying.NoKeyKeyingStrategy"/>
+                <deliveryStrategy class="com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy"/>
+                <producerConfig>bootstrap.servers=${KAFKA_HOST}:${KAFKA_PORT}</producerConfig>
+                <producerConfig>acks=0</producerConfig>
+                <producerConfig>linger.ms=100</producerConfig>
+                <producerConfig>max.block.ms=100</producerConfig>
+            </appender>
+        </then>
+    </if>
+
+    <if condition='${ENABLE_KAFKA}'>
+        <then>
+            <root level="INFO">
+                <appender-ref ref="fail-fast-kafka-appender"/>
+            </root>
+        </then>
+    </if>
+
+</configuration>
